@@ -12,6 +12,8 @@ import net.imglib2.labkit.actions.OrthogonalView;
 import net.imglib2.labkit.actions.SegmentationAsLabelAction;
 import net.imglib2.labkit.actions.SegmentationSave;
 import net.imglib2.labkit.actions.SelectClassifier;
+import net.imglib2.labkit.models.SegmentationResultsModels;
+import net.imglib2.labkit.panel.SegmenterPanel;
 import net.imglib2.labkit.segmentation.PredictionLayer;
 import net.imglib2.labkit.segmentation.Segmenter;
 import net.imglib2.labkit.segmentation.TrainClassifier;
@@ -61,7 +63,7 @@ public class SegmentationComponent implements AutoCloseable {
 
 	private SegmentationModel segmentationModel;
 
-	private SegmentationResultsModel segmentationResultsModel;
+	private SegmentationResultsModels segmentationResultsModels;
 
 	public SegmentationComponent(Context context,
 			JFrame dialogBoxOwner,
@@ -93,7 +95,7 @@ public class SegmentationComponent implements AutoCloseable {
 		this.fixedLabels = fixedLabels;
 		initModels(image, labeling);
 		labelingComponent = new LabelingComponent(dialogBoxOwner, model);
-		labelingComponent.addBdvLayer( new PredictionLayer( segmentationResultsModel ) );
+		labelingComponent.addBdvLayer( new PredictionLayer( segmentationResultsModels ) );
 		initActions();
 		JPanel leftPanel = initLeftPanel();
 		this.panel = initPanel( leftPanel, labelingComponent.getComponent() );
@@ -104,11 +106,12 @@ public class SegmentationComponent implements AutoCloseable {
 		model = new ImageLabelingModel( image.showable(), labeling, inputImage.isTimeSeries());
 		segmenter = initClassifier( context );
 		segmentationModel = new SegmentationModel( image.imageForSegmentation(), model, segmenter );
-		segmentationResultsModel = new SegmentationResultsModel( segmentationModel );
+		segmentationResultsModels = new SegmentationResultsModels( segmentationModel );
 	}
 
 	private Segmenter initClassifier( Context context )
 	{
+		// FIXME: should this be placed in SegmentationModel
 		TrainableSegmentationSegmenter classifier1 = new TrainableSegmentationSegmenter(context, inputImage);
 		return inputImage.isTimeSeries() ? new TimeSeriesSegmenter(classifier1) : classifier1;
 	}
@@ -120,31 +123,24 @@ public class SegmentationComponent implements AutoCloseable {
 		new ClassifierIoAction(extensible, this.segmenter );
 		new LabelingIoAction(extensible, model.labeling(), inputImage);
 		new AddLabelingIoAction(extensible, model.labeling());
-		new SegmentationSave(extensible, segmentationResultsModel );
+		new SegmentationSave(extensible, segmentationResultsModels );
 		new OpenImageAction(extensible);
 		new OrthogonalView(extensible, model);
 		new SelectClassifier(extensible, segmenter );
 		new BatchSegmentAction(extensible, segmenter );
-		new SegmentationAsLabelAction(extensible, segmentationResultsModel, model.labeling());
+		new SegmentationAsLabelAction(extensible, segmentationResultsModels, model.labeling());
 		MeasureConnectedComponents.addAction(extensible, model);
 	}
 
 	private JPanel initLeftPanel()
 	{
 		JPanel leftPanel = new JPanel();
-		leftPanel.setLayout(new MigLayout("","[grow]","[][][grow]"));
+		leftPanel.setLayout(new MigLayout("","[grow]","[][grow][]"));
 		ActionMap actions = getActions();
-		leftPanel.add( trainClassifierButton( actions ), "grow, wrap");
 		leftPanel.add(new VisibilityPanel( actions ), "wrap");
-		leftPanel.add(new LabelPanel(dialogBoxOwner, new ColoredLabelsModel( model ), fixedLabels).getComponent(), "grow");
+		leftPanel.add(new LabelPanel(dialogBoxOwner, new ColoredLabelsModel( model ), fixedLabels).getComponent(), "grow, wrap");
+		leftPanel.add(new SegmenterPanel( segmentationModel, () -> initClassifier( context ), actions ).getComponent(), "grow");
 		return leftPanel;
-	}
-
-	private JButton trainClassifierButton( ActionMap actions )
-	{
-		JButton button = new JButton( actions.get( "Train Classifier" ) );
-		button.setFocusable( false );
-		return button;
 	}
 
 	private JSplitPane initPanel( JComponent left, JComponent right )

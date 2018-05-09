@@ -8,6 +8,9 @@ import net.imglib2.labkit.labeling.Labeling;
 import net.imglib2.labkit.utils.LabkitUtils;
 import net.imglib2.realtransform.AffineTransform3D;
 
+import java.util.ArrayList;
+import java.util.List;
+
 /**
  * Serves as a model for PredictionLayer and TrainClassifierAction
  */
@@ -15,15 +18,19 @@ public class SegmentationModel
 {
 
 	private final ImageLabelingModel imageLabelingModel;
-	private final Segmenter segmenter;
+	private final Holder<NamedSegmenter> segmenter;
+	private List< NamedSegmenter > segmenters = new ArrayList<>();
 
 	private final RandomAccessibleInterval< ? > compatibleImage;
 	private final CellGrid grid;
 
+
 	public SegmentationModel( RandomAccessibleInterval< ? > compatibleImage, ImageLabelingModel imageLabelingModel, Segmenter segmenter )
 	{
 		this.imageLabelingModel = imageLabelingModel;
-		this.segmenter = segmenter;
+		NamedSegmenter namedSegmenter = new NamedSegmenter( segmenter );
+		this.segmenter = new DefaultHolder<>( namedSegmenter );
+		this.segmenters.add( namedSegmenter );
 		this.compatibleImage = compatibleImage;
 		this.grid = LabkitUtils.suggestGrid( this.compatibleImage, imageLabelingModel.isTimeSeries() );
 	}
@@ -40,9 +47,11 @@ public class SegmentationModel
 		return grid;
 	}
 
-	public Segmenter segmenter() {
-		return segmenter;
+	public List<NamedSegmenter> segmenters() {
+		return segmenters;
 	}
+
+	public Holder<NamedSegmenter> segmenter() { return segmenter; }
 
 	public ColorMap colorMap() {
 		return imageLabelingModel.colorMapProvider().colorMap();

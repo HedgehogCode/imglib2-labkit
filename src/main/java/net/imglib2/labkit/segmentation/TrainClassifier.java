@@ -21,7 +21,7 @@ public class TrainClassifier
 	{
 		try
 		{
-			model.segmenter().train(Collections.singletonList(model.image()), Collections.singletonList(model.labeling()));
+			model.segmenter().get().get().train(Collections.singletonList(model.image()), Collections.singletonList(model.labeling()));
 		}
 		catch ( final Exception e1 )
 		{
