@@ -7,6 +7,11 @@ import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.roi.labeling.ImgLabeling;
 import net.imglib2.roi.labeling.LabelingMapping;
+import net.imglib2.roi.labeling.LabelingType;
+import net.imglib2.sparse.DifferenceRandomAccessibleIntType;
+import net.imglib2.sparse.SparseRandomAccessIntType;
+import net.imglib2.type.numeric.integer.IntType;
+import net.imglib2.labkit.labeling.DiffImgLabeling.Diff;
 import net.imglib2.labkit.utils.DimensionUtils;
 import net.imglib2.view.Views;
 
@@ -87,5 +92,60 @@ public class Labelings {
 	{
 		return IntStream.range(0, mapping.numSets()).mapToObj(
 			mapping::labelsAtIndex).collect(Collectors.toList());
+	}
+
+	/**
+	 * Computes the difference between a and b. The resulting labeling will contain
+	 * for each pixel a set of differences that are between the labeling a and
+	 * labeling b. TOOD how can the difference be interpreted?
+	 *
+	 * @param a the first labeling
+	 * @param b the second labeling
+	 * @return
+	 */
+	public static <T> ImgLabeling<Diff<T>, IntType> diff(RandomAccessibleInterval<LabelingType<T>> a,
+			RandomAccessibleInterval<LabelingType<T>> b) {
+		// Get the cursor over the difference
+		Cursor<?> cursor = null;
+		if (a instanceof ImgLabeling) {
+			final RandomAccessibleInterval<?> indexImg = ((ImgLabeling<T, ?>) a).getIndexImg();
+			if (indexImg instanceof DifferenceRandomAccessibleIntType) {
+				cursor = ((DifferenceRandomAccessibleIntType) indexImg).differencePattern().localizingCursor();
+			}
+		}
+		if (cursor == null) {
+			cursor = Views.iterable(a).localizingCursor();
+		}
+
+		// Create the result
+		final SparseRandomAccessIntType img = new SparseRandomAccessIntType(a);
+		final ImgLabeling<Diff<T>, IntType> result = new ImgLabeling<>(img);
+
+		// Loop over the difference and build the difference labeling
+		final RandomAccess<LabelingType<T>> aRA = a.randomAccess();
+		final RandomAccess<LabelingType<T>> bRA = b.randomAccess();
+		final RandomAccess<LabelingType<Diff<T>>> rRA = result.randomAccess();
+		while (cursor.hasNext()) {
+			cursor.fwd();
+			aRA.setPosition(cursor);
+			bRA.setPosition(cursor);
+			rRA.setPosition(cursor);
+			final LabelingType<T> aLabelSet = aRA.get();
+			final LabelingType<T> bLabelSet = bRA.get();
+			final LabelingType<Diff<T>> diff = rRA.get();
+			writeDifferenceSet(aLabelSet, bLabelSet, diff);
+		}
+		return result;
+	}
+
+	private static <T> void writeDifferenceSet(Set<T> aLabelSet,
+		Set<T> bLabelSet, LabelingType<Diff<T>> diff)
+	{
+		for (T label : aLabelSet)
+			if (!bLabelSet.contains(label))
+				diff.add(Diff.remove(label));
+		for (T label : bLabelSet)
+			if (!aLabelSet.contains(label))
+				diff.add(Diff.add(label));
 	}
 }

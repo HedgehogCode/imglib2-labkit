@@ -3,7 +3,6 @@ package net.imglib2.sparse;
 
 import gnu.trove.map.hash.TLongIntHashMap;
 import net.imglib2.AbstractWrappedInterval;
-import net.imglib2.Cursor;
 import net.imglib2.Interval;
 import net.imglib2.Localizable;
 import net.imglib2.Point;
@@ -16,9 +15,11 @@ import net.imglib2.type.BooleanType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.integer.IntType;
 import net.imglib2.util.IntervalIndexer;
-import net.imglib2.util.ValuePair;
-import net.imglib2.view.Views;
 
+/**
+ * @author Matthias Arzt
+ * @author Benjamin Wilhelm
+ */
 public class DifferenceRandomAccessibleIntType extends
 	AbstractWrappedInterval<RandomAccessibleInterval<? extends IntegerType<?>>>
 	implements RandomAccessibleInterval<IntType>
