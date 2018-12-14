@@ -97,24 +97,27 @@ public class Labelings {
 	/**
 	 * Computes the difference between a and b. The resulting labeling will contain
 	 * for each pixel a set of differences that are between the labeling a and
-	 * labeling b. TOOD how can the difference be interpreted?
+	 * labeling b. The difference describes how to get from the labeling a to the
+	 * labeling b.
 	 *
-	 * @param a the first labeling
-	 * @param b the second labeling
+	 * @param a
+	 *            the first labeling
+	 * @param b
+	 *            the second labeling
 	 * @return
 	 */
-	public static <T> ImgLabeling<Diff<T>, IntType> diff(RandomAccessibleInterval<LabelingType<T>> a,
-			RandomAccessibleInterval<LabelingType<T>> b) {
+	public static <T> ImgLabeling<Diff<T>, IntType> diff(final RandomAccessibleInterval<LabelingType<T>> a,
+			final RandomAccessibleInterval<LabelingType<T>> b) {
 		// Get the cursor over the difference
 		Cursor<?> cursor = null;
-		if (a instanceof ImgLabeling) {
-			final RandomAccessibleInterval<?> indexImg = ((ImgLabeling<T, ?>) a).getIndexImg();
+		if (b instanceof ImgLabeling) {
+			final RandomAccessibleInterval<?> indexImg = ((ImgLabeling<T, ?>) b).getIndexImg();
 			if (indexImg instanceof DifferenceRandomAccessibleIntType) {
 				cursor = ((DifferenceRandomAccessibleIntType) indexImg).differencePattern().localizingCursor();
 			}
 		}
 		if (cursor == null) {
-			cursor = Views.iterable(a).localizingCursor();
+			cursor = Views.iterable(b).localizingCursor();
 		}
 
 		// Create the result
@@ -147,5 +150,45 @@ public class Labelings {
 		for (T label : bLabelSet)
 			if (!aLabelSet.contains(label))
 				diff.add(Diff.add(label));
+	}
+
+	public static <T> void applyDiff(final RandomAccessibleInterval<LabelingType<T>> lab,
+			final RandomAccessibleInterval<LabelingType<Diff<T>>> diff) {
+		// Get a cursor over the difference
+		Cursor<?> cursor = null;
+		if (diff instanceof ImgLabeling) {
+			final RandomAccessibleInterval<?> indexImg = ((ImgLabeling<Diff<T>, ?>) diff).getIndexImg();
+			if (indexImg instanceof SparseRandomAccessIntType) {
+				cursor = ((SparseRandomAccessIntType) indexImg).sparseCursor();
+			}
+		}
+		if (cursor == null) {
+			cursor = Views.iterable(diff).localizingCursor();
+		}
+
+		// Loop over the difference and
+		final RandomAccess<LabelingType<T>> lRA = lab.randomAccess();
+		final RandomAccess<LabelingType<Diff<T>>> dRA = diff.randomAccess();
+		while (cursor.hasNext()) {
+			cursor.fwd();
+			lRA.setPosition(cursor);
+			dRA.setPosition(cursor);
+			final LabelingType<T> labelSet = lRA.get();
+			final LabelingType<Diff<T>> diffSet = dRA.get();
+			applyDifferenceSet(labelSet, diffSet);
+		}
+	}
+
+	public static <T> void applyDifferenceSet(final LabelingType<T> labelSet, final LabelingType<Diff<T>> diffSet) {
+		for (final Diff<T> d : diffSet) {
+			switch (d.action) {
+			case ADD:
+				labelSet.add(d.label);
+				break;
+			case REMOVE:
+				labelSet.remove(d.label);
+				break;
+			}
+		}
 	}
 }
