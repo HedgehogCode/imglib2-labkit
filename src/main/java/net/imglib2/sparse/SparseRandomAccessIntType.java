@@ -25,7 +25,7 @@ public class SparseRandomAccessIntType extends AbstractWrappedInterval<Interval>
 {
 
 	private final IntervalIndexer2 indexer;
-	private final TLongIntHashMap values;
+	private TLongIntHashMap values;
 	private final int noEntryValue;
 
 	public SparseRandomAccessIntType(Interval source) {
@@ -108,6 +108,27 @@ public class SparseRandomAccessIntType extends AbstractWrappedInterval<Interval>
 		@Override
 		public Sampler<IntType> copy() {
 			throw new UnsupportedOperationException();
+		}
+	}
+
+	/**
+	 * Internals. Can be derived for implementing de/serialisation of the
+	 * {@link SparseRandomAccessIntType}.
+	 */
+	public static class SerialisationAccess {
+
+		private final SparseRandomAccessIntType val;
+
+		protected SerialisationAccess(final SparseRandomAccessIntType val) {
+			this.val = val;
+		}
+
+		protected TLongIntHashMap getIndexToValueMap() {
+			return val.values;
+		}
+
+		protected void setIndexToValueMap(final TLongIntHashMap values) {
+			val.values = values;
 		}
 	}
 }
