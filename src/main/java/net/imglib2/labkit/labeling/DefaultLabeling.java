@@ -9,14 +9,12 @@ import net.imglib2.labkit.utils.ColorSupplier;
 import net.imglib2.labkit.utils.LabkitUtils;
 import net.imglib2.converter.Converter;
 import net.imglib2.converter.Converters;
-import net.imglib2.loops.LoopBuilder;
 import net.imglib2.roi.IterableRegion;
 import net.imglib2.roi.labeling.ImgLabeling;
 import net.imglib2.roi.labeling.LabelingMapping;
 import net.imglib2.roi.labeling.LabelingType;
 import net.imglib2.sparse.SparseIterableRegion;
 import net.imglib2.sparse.SparseRandomAccessIntType;
-import net.imglib2.type.BooleanType;
 import net.imglib2.type.logic.BitType;
 import net.imglib2.type.numeric.IntegerType;
 import net.imglib2.type.numeric.integer.IntType;
@@ -31,22 +29,17 @@ import java.util.stream.IntStream;
 /**
  * @author Matthias Arzt
  */
-public class DefaultLabeling extends AbstractWrappedInterval<Interval>
-	implements Labeling
+public class DefaultLabeling extends AbstractLabling
 {
 
 	private final ImgLabeling<Label, ?> imgLabeling;
-	private List<Label> labels;
 	private List<CalibratedAxis> axes;
-	private ColorSupplier colorSupplier;
 
 	private DefaultLabeling(List<Label> labels, ImgLabeling<Label, ?> labeling,
 		ColorSupplier colorSupplier)
 	{
-		super(labeling);
+		super(labels, labeling, colorSupplier);
 		this.imgLabeling = labeling;
-		this.labels = new ArrayList<>(labels);
-		this.colorSupplier = colorSupplier;
 		this.axes = initAxes(labeling.numDimensions());
 	}
 
@@ -121,22 +114,9 @@ public class DefaultLabeling extends AbstractWrappedInterval<Interval>
 	}
 
 	@Override
-	public List<Label> getLabels() {
-		return labels;
-	}
-
-	@Override
 	public void setAxes(List<CalibratedAxis> axes) {
 		this.axes = axes.stream().map(CalibratedAxis::copy).collect(Collectors
 			.toList());
-	}
-
-	@Override
-	public Label getLabel(String name) {
-		for (Label label : labels) {
-			if (label.name().equals(name)) return label;
-		}
-		throw new NoSuchElementException();
 	}
 
 	@Override
@@ -149,7 +129,7 @@ public class DefaultLabeling extends AbstractWrappedInterval<Interval>
 		Cursor<?> cursor = sparsityCursor();
 		RandomAccess<LabelingType<Label>> ra = imgLabeling.randomAccess();
 		Map<Label, SparseIterableRegion> regions = new HashMap<>();
-		labels.forEach(label -> regions.put(label, new SparseIterableRegion(
+		getLabels().forEach(label -> regions.put(label, new SparseIterableRegion(
 			imgLabeling)));
 		while (cursor.hasNext()) {
 			cursor.fwd();
@@ -208,54 +188,6 @@ public class DefaultLabeling extends AbstractWrappedInterval<Interval>
 	@Override
 	public List<CalibratedAxis> axes() {
 		return axes;
-	}
-
-	@Override
-	public Label addLabel(String label) {
-		Objects.requireNonNull(label);
-		final Label e = new Label(label, colorSupplier.get());
-		labels.add(e);
-		return e;
-	}
-
-	@Override
-	public Label addLabel(String newName,
-		RandomAccessibleInterval<? extends BooleanType<?>> bitmap)
-	{
-		Label label = addLabel(newName);
-		LoopBuilder.setImages(bitmap, this).forEachPixel((i, o) -> {
-			if (i.get()) o.add(label);
-		});
-		return label;
-	}
-
-	@Override
-	public void removeLabel(Label label) {
-		if (!labels.contains(label)) return;
-		labels.remove(label);
-		clearLabel(label);
-	}
-
-	@Override
-	public void renameLabel(Label oldLabel, String newLabel) {
-		oldLabel.setName(newLabel);
-	}
-
-	@Override
-	public void clearLabel(Label label) {
-		Cursor<?> cursor = sparsityCursor();
-		RandomAccess<Set<Label>> ra = randomAccess();
-		while (cursor.hasNext()) {
-			cursor.fwd();
-			ra.setPosition(cursor);
-			Set<Label> set = ra.get();
-			set.remove(label);
-		}
-	}
-
-	@Override
-	public void setLabelOrder(Comparator<? super Label> comparator) {
-		labels.sort(comparator);
 	}
 
 	public static class SetEntryAsBitType<T> extends BitType {
