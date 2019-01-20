@@ -11,7 +11,6 @@ import net.imglib2.roi.labeling.LabelingType;
 import net.imglib2.sparse.DifferenceRandomAccessibleIntType;
 import net.imglib2.sparse.SparseRandomAccessIntType;
 import net.imglib2.type.numeric.integer.IntType;
-import net.imglib2.labkit.labeling.DiffImgLabeling.Diff;
 import net.imglib2.labkit.utils.DimensionUtils;
 import net.imglib2.view.Views;
 
@@ -190,5 +189,43 @@ public class Labelings {
 				break;
 			}
 		}
+	}
+
+	public static class Diff<T> {
+
+		public final AddRemove action;
+		public final T label;
+
+		public Diff(AddRemove action, T label) {
+			this.action = action;
+			this.label = label;
+		}
+
+		public static <T> Diff<T> add(T label) {
+			return new Diff<>(AddRemove.ADD, label);
+		}
+
+		public static <T> Diff<T> remove(T label) {
+			return new Diff<>(AddRemove.REMOVE, label);
+		}
+
+		@Override
+		public boolean equals(Object obj) {
+			if (this == obj)
+				return true;
+			if (!(obj instanceof Diff))
+				return false;
+			Diff<T> that = (Diff<T>) obj;
+			return (action == that.action) && label.equals(that.label);
+		}
+
+		@Override
+		public int hashCode() {
+			return 31 * action.hashCode() + label.hashCode();
+		}
+	}
+
+	public static enum AddRemove {
+		ADD, REMOVE
 	}
 }
