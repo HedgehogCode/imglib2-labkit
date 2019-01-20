@@ -219,13 +219,14 @@ public class DefaultLabeling extends AbstractWrappedInterval<Interval>
 	}
 
 	@Override
-	public void addLabel(String newName,
+	public Label addLabel(String newName,
 		RandomAccessibleInterval<? extends BooleanType<?>> bitmap)
 	{
 		Label label = addLabel(newName);
 		LoopBuilder.setImages(bitmap, this).forEachPixel((i, o) -> {
 			if (i.get()) o.add(label);
 		});
+		return label;
 	}
 
 	@Override

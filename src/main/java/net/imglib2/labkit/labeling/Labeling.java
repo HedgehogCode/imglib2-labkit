@@ -61,7 +61,7 @@ public interface Labeling extends Interval,
 
 	Label addLabel(String label);
 
-	void addLabel(String newName,
+	Label addLabel(String newName,
 		RandomAccessibleInterval<? extends BooleanType<?>> bitmap);
 
 	void removeLabel(Label label);
