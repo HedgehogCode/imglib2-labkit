@@ -5,7 +5,6 @@ import com.google.gson.annotations.JsonAdapter;
 import net.imagej.axis.CalibratedAxis;
 import net.imglib2.Cursor;
 import net.imglib2.Interval;
-import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.roi.IterableRegion;
 import net.imglib2.roi.labeling.ImgLabeling;
@@ -71,10 +70,4 @@ public interface Labeling extends Interval,
 	void clearLabel(Label label);
 
 	void setLabelOrder(Comparator<? super Label> comparator);
-
-	@Override
-	RandomAccess<Set<Label>> randomAccess();
-
-	@Override
-	RandomAccess<Set<Label>> randomAccess(Interval interval);
 }
