@@ -1,8 +1,6 @@
 
 package net.imglib2.labkit.labeling;
 
-import net.imagej.axis.CalibratedAxis;
-import net.imagej.axis.DefaultLinearAxis;
 import net.imglib2.*;
 import net.imglib2.RandomAccess;
 import net.imglib2.labkit.utils.ColorSupplier;
@@ -24,7 +22,6 @@ import net.imglib2.view.Views;
 
 import java.util.*;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 
 /**
  * @author Matthias Arzt
@@ -33,14 +30,12 @@ public class DefaultLabeling extends AbstractLabling
 {
 
 	private final ImgLabeling<Label, ?> imgLabeling;
-	private List<CalibratedAxis> axes;
 
 	private DefaultLabeling(List<Label> labels, ImgLabeling<Label, ?> labeling,
 		ColorSupplier colorSupplier)
 	{
 		super(labels, labeling, colorSupplier);
 		this.imgLabeling = labeling;
-		this.axes = initAxes(labeling.numDimensions());
 	}
 
 	public static Labeling createEmpty(List<String> labels, Interval interval) {
@@ -103,20 +98,9 @@ public class DefaultLabeling extends AbstractLabling
 		return result;
 	}
 
-	private List<CalibratedAxis> initAxes(int i) {
-		return IntStream.range(0, i).mapToObj(ignore -> new DefaultLinearAxis())
-			.collect(Collectors.toList());
-	}
-
 	@Override
 	public Interval interval() {
 		return new FinalInterval(imgLabeling);
-	}
-
-	@Override
-	public void setAxes(List<CalibratedAxis> axes) {
-		this.axes = axes.stream().map(CalibratedAxis::copy).collect(Collectors
-			.toList());
 	}
 
 	@Override
@@ -183,11 +167,6 @@ public class DefaultLabeling extends AbstractLabling
 				return mapping.numSets();
 			}
 		};
-	}
-
-	@Override
-	public List<CalibratedAxis> axes() {
-		return axes;
 	}
 
 	public static class SetEntryAsBitType<T> extends BitType {

@@ -6,9 +6,14 @@ import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
+import net.imagej.axis.CalibratedAxis;
+import net.imagej.axis.DefaultLinearAxis;
 import net.imglib2.AbstractWrappedInterval;
 import net.imglib2.Cursor;
+import net.imglib2.FinalInterval;
 import net.imglib2.Interval;
 import net.imglib2.RandomAccess;
 import net.imglib2.RandomAccessibleInterval;
@@ -20,11 +25,13 @@ public abstract class AbstractLabling extends AbstractWrappedInterval<Interval> 
 
 	private final List<Label> labels;
 	private final ColorSupplier colorSupplier;
+	private List<CalibratedAxis> axes;
 
 	public AbstractLabling(final List<Label> labels, final Interval source, final ColorSupplier colorSupplier) {
 		super(source);
 		this.labels = new ArrayList<>(labels);
 		this.colorSupplier = colorSupplier;
+		this.axes = initAxes(numDimensions());
 	}
 
 	@Override
@@ -88,5 +95,24 @@ public abstract class AbstractLabling extends AbstractWrappedInterval<Interval> 
 			Set<Label> set = ra.get();
 			set.remove(label);
 		}
+	}
+
+	@Override
+	public Interval interval() {
+		return new FinalInterval(this);
+	}
+
+	@Override
+	public void setAxes(final List<CalibratedAxis> axes) {
+		this.axes = axes.stream().map(CalibratedAxis::copy).collect(Collectors.toList());
+	}
+
+	@Override
+	public List<CalibratedAxis> axes() {
+		return axes;
+	}
+
+	private List<CalibratedAxis> initAxes(int i) {
+		return IntStream.range(0, i).mapToObj(ignore -> new DefaultLinearAxis()).collect(Collectors.toList());
 	}
 }
