@@ -81,7 +81,7 @@ public class ColoredLabelsModel {
 	}
 
 	public void setColor(Label label, ARGBType newColor) {
-		label.setColor(newColor);
+		model.labeling().get().setLabelColor(label, newColor);
 		fireLabelsChanged();
 	}
 

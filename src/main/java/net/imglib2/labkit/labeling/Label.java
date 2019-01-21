@@ -25,7 +25,7 @@ public class Label {
 		return name;
 	}
 
-	public void setName(String name) {
+	void setName(String name) {
 		this.name = name;
 	}
 
@@ -33,7 +33,7 @@ public class Label {
 		return color;
 	}
 
-	public void setColor(ARGBType color) {
+	void setColor(ARGBType color) {
 		this.color.set(color);
 	}
 

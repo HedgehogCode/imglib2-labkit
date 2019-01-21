@@ -20,6 +20,7 @@ import net.imglib2.RandomAccessibleInterval;
 import net.imglib2.labkit.utils.ColorSupplier;
 import net.imglib2.loops.LoopBuilder;
 import net.imglib2.type.BooleanType;
+import net.imglib2.type.numeric.ARGBType;
 
 public abstract class AbstractLabling extends AbstractWrappedInterval<Interval> implements Labeling {
 
@@ -114,5 +115,10 @@ public abstract class AbstractLabling extends AbstractWrappedInterval<Interval> 
 
 	private List<CalibratedAxis> initAxes(int i) {
 		return IntStream.range(0, i).mapToObj(ignore -> new DefaultLinearAxis()).collect(Collectors.toList());
+	}
+
+	@Override
+	public void setLabelColor(final Label label, final ARGBType color) {
+		label.setColor(color);
 	}
 }

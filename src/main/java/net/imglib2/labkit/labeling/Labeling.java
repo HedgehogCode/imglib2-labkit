@@ -10,6 +10,7 @@ import net.imglib2.roi.IterableRegion;
 import net.imglib2.roi.labeling.ImgLabeling;
 import net.imglib2.type.BooleanType;
 import net.imglib2.type.logic.BitType;
+import net.imglib2.type.numeric.ARGBType;
 import net.imglib2.type.numeric.IntegerType;
 
 import java.util.Comparator;
@@ -68,6 +69,8 @@ public interface Labeling extends Interval,
 	void renameLabel(Label oldLabel, String newLabel);
 
 	void clearLabel(Label label);
+
+	void setLabelColor(Label label, ARGBType color);
 
 	void setLabelOrder(Comparator<? super Label> comparator);
 }
