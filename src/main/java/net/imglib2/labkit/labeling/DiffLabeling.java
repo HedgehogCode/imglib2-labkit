@@ -34,28 +34,33 @@ public final class DiffLabeling<T extends Set<Label>, D extends Set<Diff<Label>>
 	public static <D extends Set<Diff<Label>>> DiffLabeling<Set<Label>, D> fromSourceAndDiff(final Set<String> labels,
 			final RandomAccessibleInterval<? extends Set<String>> source, final LabelingDifference<D> diff) {
 		final ColorSupplier colorSupplier = new ColorSupplier();
-		final List<Label> mappedLabels = mapStringLabels(labels, colorSupplier);
-		final RandomAccessibleInterval<Set<Label>> mappedSource = createMappedSource(mappedLabels, source,
+		final Map<String, Label> sourceDiffLabels = diff.getSourceLabels().stream()
+				.collect(Collectors.toMap(Label::name, Function.identity()));
+		for (final String l : labels) {
+			if (!sourceDiffLabels.containsKey(l)) {
+				sourceDiffLabels.put(l, new Label(l, colorSupplier.get()));
+			}
+		}
+		final RandomAccessibleInterval<Set<Label>> mappedSource = createMappedSource(sourceDiffLabels, source,
 				colorSupplier);
-
-		return new DiffLabeling<>(mappedLabels, colorSupplier, mappedSource, diff);
+		return new DiffLabeling<>(new ArrayList<>(sourceDiffLabels.values()), colorSupplier, mappedSource, diff);
 	}
 
 	public static DiffLabeling<LabelingType<Label>, LabelingType<Diff<Label>>> fromEmpty(final Interval interval) {
 		final ImgLabeling<Label, IntType> source = createEmptySource(interval);
-		final LabelingDifference<LabelingType<Diff<Label>>> diff = createEmptyDiff(interval);
+		final LabelingDifference<LabelingType<Diff<Label>>> diff = createEmptyDiff(interval, null);
 		return new DiffLabeling<>(Collections.emptyList(), new ColorSupplier(), source, diff);
 	}
 
 	public static DiffLabeling<Set<Label>, LabelingType<Diff<Label>>> fromSource(final Set<String> labels,
 			final RandomAccessibleInterval<? extends Set<String>> source) {
 		final ColorSupplier colorSupplier = new ColorSupplier();
-		final List<Label> mappedLabels = mapStringLabels(labels, colorSupplier);
-		final RandomAccessibleInterval<Set<Label>> mappedSource = createMappedSource(mappedLabels, source,
-				colorSupplier);
-		final LabelingDifference<LabelingType<Diff<Label>>> diff = createEmptyDiff(source);
+		final Map<String, Label> mapping = mapStringLabels(labels, colorSupplier);
+		final RandomAccessibleInterval<Set<Label>> mappedSource = createMappedSource(mapping, source, colorSupplier);
+		final LabelingDifference<LabelingType<Diff<Label>>> diff = createEmptyDiff(source,
+				new HashSet<>(mapping.values()));
 
-		return new DiffLabeling<>(mappedLabels, colorSupplier, mappedSource, diff);
+		return new DiffLabeling<>(new ArrayList<>(mapping.values()), colorSupplier, mappedSource, diff);
 	}
 
 	public static <D extends Set<Diff<Label>>> DiffLabeling<LabelingType<Label>, D> fromDiff(
@@ -70,17 +75,22 @@ public final class DiffLabeling<T extends Set<Label>, D extends Set<Diff<Label>>
 		return new ImgLabeling<>(indexImg);
 	}
 
-	private static LabelingDifference<LabelingType<Diff<Label>>> createEmptyDiff(final Interval interval) {
-		return new SparseLabelingDifference(interval);
+	private static LabelingDifference<LabelingType<Diff<Label>>> createEmptyDiff(final Interval interval,
+			final Set<Label> sourceLables) {
+		if (sourceLables != null) {
+			return new SparseLabelingDifference(interval, sourceLables);
+		} else {
+			return new SparseLabelingDifference(interval);
+		}
 	}
 
-	private static List<Label> mapStringLabels(final Set<String> labels, final ColorSupplier colorSupplier) {
-		return labels.stream().map(n -> new Label(n, colorSupplier.get())).collect(Collectors.toList());
+	private static Map<String, Label> mapStringLabels(final Set<String> labels, final ColorSupplier colorSupplier) {
+		return labels.stream().map(n -> new Label(n, colorSupplier.get()))
+				.collect(Collectors.toMap(Label::name, Function.identity()));
 	}
 
-	private static RandomAccessibleInterval<Set<Label>> createMappedSource(final List<Label> labels,
+	private static RandomAccessibleInterval<Set<Label>> createMappedSource(final Map<String, Label> mapping,
 			final RandomAccessibleInterval<? extends Set<String>> source, final ColorSupplier colorSupplier) {
-		final Map<String, Label> mapping = labels.stream().collect(Collectors.toMap(Label::name, Function.identity()));
 		return new MappedRandomAccessibleInterval<>(source, s -> SetUtils.map(s, mapping::get));
 	}
 
@@ -90,13 +100,12 @@ public final class DiffLabeling<T extends Set<Label>, D extends Set<Diff<Label>>
 
 	private final List<Label> sourceLabels;
 
-	public DiffLabeling(final List<Label> labels, final ColorSupplier colorSupplier,
+	public DiffLabeling(final List<Label> sourceLabels, final ColorSupplier colorSupplier,
 			final RandomAccessibleInterval<T> source, final LabelingDifference<D> diff) {
-		super(labels, new FinalInterval(source), colorSupplier);
+		super(sourceLabels, new FinalInterval(source), colorSupplier);
 		this.source = source;
 		this.diff = diff;
-
-		sourceLabels = new ArrayList<>(labels);
+		this.sourceLabels = new ArrayList<>(sourceLabels);
 
 		// Adapt the labels list according to the diff
 		for (final Label l : diff.getAddedLabels()) {
@@ -202,37 +211,20 @@ public final class DiffLabeling<T extends Set<Label>, D extends Set<Diff<Label>>
 	protected boolean addLabel(final T source, final D diff, final Label label) {
 		if (source.contains(label)) {
 			// Already in source
-			final Diff<Label> removeDiff = Diff.remove(label);
-			if (diff.contains(removeDiff)) {
-				// Was removed: We don't remove it anymore
-				diff.remove(removeDiff);
-				return true;
-			} else {
-				// Was not removed: We don't add it
-				return false;
-			}
+			return diff.remove(Diff.remove(label));
 		} else {
 			// Not in source
-			final Diff<Label> addDiff = Diff.add(label);
-			if (diff.contains(addDiff)) {
-				// Was added: We don't add it
-				return false;
-			} else {
-				// Was not added: We add it
-				diff.add(addDiff);
-				return true;
-			}
+			return diff.add(Diff.add(label));
 		}
 	}
 
-	protected void removeLabel(final T source, final D diff, final Label label) {
+	protected boolean removeLabel(final T source, final D diff, final Label label) {
 		if (source.contains(label)) {
-			diff.add(Diff.remove(label));
-			return;
-		}
-		final Diff<Label> addDiff = Diff.add(label);
-		if (diff.contains(addDiff)) {
-			diff.remove(addDiff);
+			// Source contains label: Add remove to diff
+			return diff.add(Diff.remove(label));
+		} else {
+			// Not in source: Remove add:label if it is in the diff
+			return diff.remove(Diff.add(label));
 		}
 	}
 
@@ -246,29 +238,7 @@ public final class DiffLabeling<T extends Set<Label>, D extends Set<Diff<Label>>
 
 			@Override
 			public Iterator<Label> iterator() {
-				// TODO remove is called on the iterator :(
-				final Iterator<Label> iterator = getCurrent().iterator();
-				return new Iterator<Label>() {
-
-					private Label last;
-
-					@Override
-					public boolean hasNext() {
-						return iterator.hasNext();
-					}
-
-					@Override
-					public Label next() {
-						last = iterator.next();
-						return last;
-					}
-
-					@Override
-					public void remove() {
-						updateSourcePos();
-						removeLabel(sourceRA.get(), diffRA.get(), last);
-					};
-				};
+				return getCurrent().iterator();
 			}
 
 			@Override
@@ -284,6 +254,14 @@ public final class DiffLabeling<T extends Set<Label>, D extends Set<Diff<Label>>
 			private Set<Label> getCurrent() {
 				updateSourcePos();
 				return getAppliedSet(sourceRA.get(), diffRA.get());
+			}
+
+			public boolean remove(final Object o) {
+				if (!(o instanceof Label)) {
+					return false;
+				}
+				updateSourcePos();
+				return removeLabel(sourceRA.get(), diffRA.get(), (Label) o);
 			}
 		};
 

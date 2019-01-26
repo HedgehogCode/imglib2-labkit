@@ -8,7 +8,7 @@ import net.imglib2.labkit.labeling.Labelings.Diff;
 
 public interface LabelingDifference<D extends Set<Diff<Label>>> extends RandomAccessibleInterval<D> {
 
-	Set<Label> getLabels();
+	Set<Label> getSourceLabels();
 
 	Set<Label> getAddedLabels();
 

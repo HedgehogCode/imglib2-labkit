@@ -16,7 +16,7 @@ public class SparseLabelingDifference extends ImgLabeling<Diff<Label>, IntType>
 		implements LabelingDifference<LabelingType<Diff<Label>>> {
 
 	// TODO Can we make this a list and keep the order?
-	private final Set<Label> labels;
+	private final Set<Label> sourceLabels;
 
 	private final Set<Label> addedLabels;
 
@@ -24,17 +24,25 @@ public class SparseLabelingDifference extends ImgLabeling<Diff<Label>, IntType>
 
 	private final Map<String, String> renamedLabels;
 
+	public SparseLabelingDifference(final Interval interval, final Set<Label> sourceLabels) {
+		super(new SparseRandomAccessIntType(interval));
+		addedLabels = new HashSet<>();
+		removedLabels = new HashSet<>();
+		renamedLabels = new HashMap<>();
+		this.sourceLabels = new HashSet<>(sourceLabels);
+	}
+
 	public SparseLabelingDifference(final Interval interval) {
 		super(new SparseRandomAccessIntType(interval));
 		addedLabels = new HashSet<>();
 		removedLabels = new HashSet<>();
 		renamedLabels = new HashMap<>();
-		labels = new HashSet<>();
+		sourceLabels = new HashSet<>();
 	}
 
 	@Override
-	public Set<Label> getLabels() {
-		return labels;
+	public Set<Label> getSourceLabels() {
+		return sourceLabels;
 	}
 
 	@Override
